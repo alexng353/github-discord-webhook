@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Dashboard - GitHub Discord Webhook</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<script>
+		tailwind.config = {
+			darkMode: 'class',
+			theme: {
+				extend: {
+					fontFamily: {
+						sans: ['JetBrains Mono', 'monospace'],
+					},
+				},
+			},
+		}
+	</script>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<style>
+		body { font-family: 'JetBrains Mono', monospace; }
+		.fade-in { animation: fadeIn 0.2s ease-out; }
+		@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+		.hidden { display: none; }
+	</style>
+</head>
+<body class="min-h-full bg-zinc-950 text-zinc-100">
+	<div class="min-h-full">
+		<!-- Navigation -->
+		<nav class="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm sticky top-0 z-50">
+			<div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+				<div class="flex h-16 items-center justify-between">
+					<div class="flex items-center gap-3">
+						<div class="h-9 w-9 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+							<svg class="h-5 w-5 text-zinc-950" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+							</svg>
+						</div>
+						<span class="text-lg font-semibold">Dashboard</span>
+					</div>
+					<div class="flex items-center gap-4">
+						<a href="/test-webhook.html" class="text-sm text-zinc-400 hover:text-zinc-200 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800">
+							Test Webhook
+						</a>
+						<span id="username" class="text-sm text-zinc-400"></span>
+						<button onclick="handleLogout()" 
+							class="text-sm text-zinc-400 hover:text-zinc-200 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800">
+							Sign out
+						</button>
+					</div>
+				</div>
+			</div>
+		</nav>
+
+		<!-- Main content -->
+		<main class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+			
+			<!-- Webhook Mappings Section -->
+			<section class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+				<div class="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
+					<div>
+						<h2 class="text-lg font-semibold">Webhook Mappings</h2>
+						<p class="text-sm text-zinc-500 mt-0.5">Route GitHub events to Discord channels</p>
+					</div>
+					<button onclick="showAddMappingModal()" 
+						class="px-4 py-2 text-sm font-medium rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors border border-emerald-500/20">
+						+ Add Mapping
+					</button>
+				</div>
+				<div id="mappings-list" class="divide-y divide-zinc-800">
+					<div class="px-6 py-8 text-center text-zinc-500">
+						<svg class="h-8 w-8 mx-auto mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+						</svg>
+						Loading...
+					</div>
+				</div>
+			</section>
+
+			<!-- Invite Codes Section (only for invite_only mode) -->
+			<section id="invites-section" class="hidden bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+				<div class="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
+					<div>
+						<h2 class="text-lg font-semibold">Invite Codes</h2>
+						<p class="text-sm text-zinc-500 mt-0.5">Invite others to register</p>
+					</div>
+					<button onclick="createInvite()" id="create-invite-btn"
+						class="px-4 py-2 text-sm font-medium rounded-lg bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 transition-colors border border-violet-500/20">
+						+ Create Invite
+					</button>
+				</div>
+				<div id="invites-list" class="divide-y divide-zinc-800">
+					<div class="px-6 py-8 text-center text-zinc-500">Loading...</div>
+				</div>
+			</section>
+
+		</main>
+	</div>
+
+	<!-- Add Mapping Modal -->
+	<div id="add-mapping-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+		<div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="hideAddMappingModal()"></div>
+		<div class="relative bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl fade-in">
+			<h3 class="text-lg font-semibold mb-4">Add Webhook Mapping</h3>
+			<form onsubmit="handleAddMapping(event)" class="space-y-4">
+				<div>
+					<label class="block text-sm font-medium text-zinc-300 mb-1.5">Repository</label>
+					<input type="text" id="mapping-repo" required placeholder="owner/repo"
+						class="w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 text-sm">
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-zinc-300 mb-1.5">Discord Webhook URL</label>
+					<input type="url" id="mapping-webhook" required placeholder="https://discord.com/api/webhooks/..."
+						class="w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 text-sm">
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-zinc-300 mb-1.5">GitHub Webhook Secret</label>
+					<div class="flex gap-2">
+						<input type="text" id="mapping-secret" required readonly
+							class="flex-1 rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 text-sm font-mono">
+						<button type="button" onclick="regenerateSecret()" 
+							class="px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 transition-colors ring-1 ring-inset ring-zinc-700"
+							title="Generate new secret">
+							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+							</svg>
+						</button>
+						<button type="button" onclick="copySecret()" 
+							class="px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 transition-colors ring-1 ring-inset ring-zinc-700"
+							title="Copy secret">
+							<svg id="copy-secret-icon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+							</svg>
+						</button>
+					</div>
+					<p class="text-xs text-zinc-500 mt-1">Auto-generated secret. Copy and use in GitHub webhook settings.</p>
+				</div>
+				<div id="mapping-error" class="hidden text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2"></div>
+				<div class="flex gap-3 pt-2">
+					<button type="button" onclick="hideAddMappingModal()"
+						class="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 transition-colors">
+						Cancel
+					</button>
+					<button type="submit" id="mapping-submit"
+						class="flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold text-zinc-950 bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 transition-all">
+						Add Mapping
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<!-- Success Modal (shows GitHub webhook URL after adding) -->
+	<div id="success-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+		<div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="hideSuccessModal()"></div>
+		<div class="relative bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-lg mx-4 shadow-2xl fade-in">
+			<div class="flex items-center gap-3 mb-4">
+				<div class="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+					<svg class="h-5 w-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+					</svg>
+				</div>
+				<h3 class="text-lg font-semibold">Webhook Created!</h3>
+			</div>
+			<p class="text-sm text-zinc-400 mb-4">Configure these in your GitHub repository webhook settings:</p>
+			<div class="space-y-3">
+				<div>
+					<label class="block text-xs font-medium text-zinc-500 mb-1">Payload URL</label>
+					<div class="flex items-center gap-2 p-3 bg-zinc-800 rounded-lg border border-zinc-700">
+						<code id="success-webhook-url" class="flex-1 text-sm text-cyan-400 break-all"></code>
+						<button onclick="copySuccessUrl()" class="p-2 hover:bg-zinc-700 rounded-md transition-colors" title="Copy URL">
+							<svg id="success-copy-icon" class="h-4 w-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+							</svg>
+						</button>
+					</div>
+				</div>
+				<div>
+					<label class="block text-xs font-medium text-zinc-500 mb-1">Secret</label>
+					<div class="flex items-center gap-2 p-3 bg-zinc-800 rounded-lg border border-zinc-700">
+						<code id="success-secret" class="flex-1 text-sm text-emerald-400 break-all font-mono"></code>
+						<button onclick="copySuccessSecret()" class="p-2 hover:bg-zinc-700 rounded-md transition-colors" title="Copy Secret">
+							<svg id="success-secret-copy-icon" class="h-4 w-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+							</svg>
+						</button>
+					</div>
+				</div>
+				<div class="text-xs text-zinc-500 space-y-1 pt-1">
+					<p>In GitHub: <strong>Settings → Webhooks → Add webhook</strong></p>
+					<p>• Set Content type to <code class="px-1 py-0.5 bg-zinc-800 rounded text-zinc-400">application/json</code></p>
+				</div>
+			</div>
+			<div class="mt-6">
+				<button onclick="hideSuccessModal()"
+					class="w-full py-2.5 px-4 rounded-lg text-sm font-semibold text-zinc-950 bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 transition-all">
+					Done
+				</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Regenerated Secret Modal -->
+	<div id="regenerated-secret-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+		<div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="hideRegeneratedSecretModal()"></div>
+		<div class="relative bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-lg mx-4 shadow-2xl fade-in">
+			<div class="flex items-center gap-3 mb-4">
+				<div class="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+					<svg class="h-5 w-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+					</svg>
+				</div>
+				<h3 class="text-lg font-semibold">Secret Regenerated</h3>
+			</div>
+			<p class="text-sm text-zinc-400 mb-2">New secret for <code id="regenerated-repo" class="px-1.5 py-0.5 bg-zinc-800 rounded text-cyan-400"></code></p>
+			<p class="text-xs text-amber-400 mb-4">⚠️ Update this secret in GitHub's webhook settings</p>
+			<div class="space-y-3">
+				<div>
+					<label class="block text-xs font-medium text-zinc-500 mb-1">New Secret</label>
+					<div class="flex items-center gap-2 p-3 bg-zinc-800 rounded-lg border border-zinc-700">
+						<code id="regenerated-secret" class="flex-1 text-sm text-emerald-400 break-all font-mono"></code>
+						<button onclick="copyRegeneratedSecret()" class="p-2 hover:bg-zinc-700 rounded-md transition-colors" title="Copy Secret">
+							<svg id="regenerated-secret-copy-icon" class="h-4 w-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+							</svg>
+						</button>
+					</div>
+				</div>
+			</div>
+			<div class="mt-6">
+				<button onclick="hideRegeneratedSecretModal()"
+					class="w-full py-2.5 px-4 rounded-lg text-sm font-semibold text-zinc-950 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 transition-all">
+					Done
+				</button>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		let currentUser = null;
+		let registrationMode = 'open';
+
+		// =====================================================================
+		// User & Auth
+		// =====================================================================
+		async function loadUser() {
+			try {
+				const res = await fetch('/auth/me');
+				if (!res.ok) {
+					window.location.href = '/';
+					return;
+				}
+				currentUser = await res.json();
+				document.getElementById('username').textContent = currentUser.username;
+			} catch {
+				window.location.href = '/';
+			}
+		}
+
+		async function handleLogout() {
+			await fetch('/auth/logout', { method: 'POST' });
+			window.location.href = '/';
+		}
+
+		// =====================================================================
+		// Webhook Mappings
+		// =====================================================================
+		async function loadMappings() {
+			const container = document.getElementById('mappings-list');
+			try {
+				const res = await fetch('/webhooks/mapping');
+				const mappings = await res.json();
+
+				if (mappings.length === 0) {
+					container.innerHTML = `
+						<div class="px-6 py-8 text-center text-zinc-500">
+							<svg class="h-8 w-8 mx-auto mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+							</svg>
+							No webhook mappings yet. Add one to get started.
+						</div>`;
+					return;
+				}
+
+				container.innerHTML = mappings.map(m => `
+					<div class="px-6 py-4 hover:bg-zinc-800/50 transition-colors">
+						<div class="flex items-center justify-between gap-4 mb-2">
+							<div class="font-medium text-zinc-100">${escapeHtml(m.repo)}</div>
+							<div class="flex items-center gap-1">
+								<button onclick="regenerateWebhookSecret('${escapeHtml(m.repo)}')" 
+									class="p-2 text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors"
+									title="Regenerate secret">
+									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+									</svg>
+								</button>
+								<button onclick="deleteMapping('${escapeHtml(m.repo)}')" 
+									class="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+									title="Delete mapping">
+									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+									</svg>
+								</button>
+							</div>
+						</div>
+						<div class="space-y-1.5">
+							<div class="flex items-center gap-2">
+								<span class="text-xs text-zinc-500 w-16 shrink-0">GitHub:</span>
+								<code class="text-xs text-cyan-400 truncate flex-1">${escapeHtml(m.githubWebhookUrl)}</code>
+								<button onclick="copyToClipboard('${escapeHtml(m.githubWebhookUrl)}', this)" 
+									class="p-1 text-zinc-500 hover:text-zinc-300 rounded transition-colors" title="Copy">
+									<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+									</svg>
+								</button>
+							</div>
+							<div class="flex items-center gap-2">
+								<span class="text-xs text-zinc-500 w-16 shrink-0">Discord:</span>
+								<code class="text-xs text-zinc-400 truncate flex-1">${escapeHtml(m.discordWebhookUrl)}</code>
+							</div>
+						</div>
+					</div>
+				`).join('');
+			} catch (err) {
+				container.innerHTML = `<div class="px-6 py-8 text-center text-red-400">Failed to load mappings</div>`;
+			}
+		}
+
+		function generateSecret() {
+			return crypto.randomUUID();
+		}
+
+		function regenerateSecret() {
+			document.getElementById('mapping-secret').value = generateSecret();
+		}
+
+		function copySecret() {
+			const secret = document.getElementById('mapping-secret').value;
+			navigator.clipboard.writeText(secret).then(() => {
+				const icon = document.getElementById('copy-secret-icon');
+				icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />';
+				icon.classList.add('text-emerald-400');
+				setTimeout(() => {
+					icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />';
+					icon.classList.remove('text-emerald-400');
+				}, 1500);
+			});
+		}
+
+		function showAddMappingModal() {
+			document.getElementById('mapping-secret').value = generateSecret();
+			document.getElementById('add-mapping-modal').classList.remove('hidden');
+			document.getElementById('mapping-repo').focus();
+		}
+
+		function hideAddMappingModal() {
+			document.getElementById('add-mapping-modal').classList.add('hidden');
+			document.getElementById('mapping-repo').value = '';
+			document.getElementById('mapping-webhook').value = '';
+			document.getElementById('mapping-secret').value = '';
+			document.getElementById('mapping-error').classList.add('hidden');
+		}
+
+		function showSuccessModal(githubWebhookUrl, secret) {
+			document.getElementById('success-webhook-url').textContent = githubWebhookUrl;
+			document.getElementById('success-secret').textContent = secret;
+			document.getElementById('success-modal').classList.remove('hidden');
+		}
+
+		function hideSuccessModal() {
+			document.getElementById('success-modal').classList.add('hidden');
+		}
+
+		function copySuccessSecret() {
+			const secret = document.getElementById('success-secret').textContent;
+			navigator.clipboard.writeText(secret).then(() => {
+				const icon = document.getElementById('success-secret-copy-icon');
+				icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />';
+				icon.classList.remove('text-zinc-400');
+				icon.classList.add('text-emerald-400');
+				setTimeout(() => {
+					icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />';
+					icon.classList.remove('text-emerald-400');
+					icon.classList.add('text-zinc-400');
+				}, 1500);
+			});
+		}
+
+		async function handleAddMapping(e) {
+			e.preventDefault();
+			const errorEl = document.getElementById('mapping-error');
+			const submitBtn = document.getElementById('mapping-submit');
+			const secret = document.getElementById('mapping-secret').value;
+			errorEl.classList.add('hidden');
+			submitBtn.disabled = true;
+			submitBtn.textContent = 'Adding...';
+
+			try {
+				const res = await fetch('/webhooks/mapping', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						repo: document.getElementById('mapping-repo').value,
+						webhookUrl: document.getElementById('mapping-webhook').value,
+						secret: secret,
+					}),
+				});
+
+				const data = await res.json();
+				if (!res.ok) throw new Error(data.error || 'Failed to add mapping');
+
+				hideAddMappingModal();
+				showSuccessModal(data.githubWebhookUrl, secret);
+				loadMappings();
+			} catch (err) {
+				errorEl.textContent = err.message;
+				errorEl.classList.remove('hidden');
+			} finally {
+				submitBtn.disabled = false;
+				submitBtn.textContent = 'Add Mapping';
+			}
+		}
+
+		async function deleteMapping(repo) {
+			if (!confirm(`Delete mapping for ${repo}?`)) return;
+			
+			try {
+				const res = await fetch(`/webhooks/mapping/${encodeURIComponent(repo)}`, { method: 'DELETE' });
+				if (!res.ok) {
+					const data = await res.json();
+					throw new Error(data.error || 'Failed to delete');
+				}
+				loadMappings();
+			} catch (err) {
+				alert(err.message);
+			}
+		}
+
+		async function regenerateWebhookSecret(repo) {
+			if (!confirm(`Regenerate secret for ${repo}?\n\nYou'll need to update the secret in GitHub's webhook settings.`)) return;
+			
+			const newSecret = generateSecret();
+			
+			try {
+				const res = await fetch(`/webhooks/mapping/${encodeURIComponent(repo)}/secret`, {
+					method: 'PATCH',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ secret: newSecret }),
+				});
+				if (!res.ok) {
+					const data = await res.json();
+					throw new Error(data.error || 'Failed to regenerate secret');
+				}
+				showRegeneratedSecretModal(repo, newSecret);
+			} catch (err) {
+				alert(err.message);
+			}
+		}
+
+		function showRegeneratedSecretModal(repo, secret) {
+			document.getElementById('regenerated-repo').textContent = repo;
+			document.getElementById('regenerated-secret').textContent = secret;
+			document.getElementById('regenerated-secret-modal').classList.remove('hidden');
+		}
+
+		function hideRegeneratedSecretModal() {
+			document.getElementById('regenerated-secret-modal').classList.add('hidden');
+		}
+
+		function copyRegeneratedSecret() {
+			const secret = document.getElementById('regenerated-secret').textContent;
+			navigator.clipboard.writeText(secret).then(() => {
+				const icon = document.getElementById('regenerated-secret-copy-icon');
+				icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />';
+				icon.classList.remove('text-zinc-400');
+				icon.classList.add('text-emerald-400');
+				setTimeout(() => {
+					icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />';
+					icon.classList.remove('text-emerald-400');
+					icon.classList.add('text-zinc-400');
+				}, 1500);
+			});
+		}
+
+		function copyToClipboard(text, btn) {
+			navigator.clipboard.writeText(text).then(() => {
+				const originalHtml = btn.innerHTML;
+				btn.innerHTML = `<svg class="h-3.5 w-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
+				setTimeout(() => { btn.innerHTML = originalHtml; }, 1500);
+			});
+		}
+
+		function copySuccessUrl() {
+			const url = document.getElementById('success-webhook-url').textContent;
+			navigator.clipboard.writeText(url).then(() => {
+				const icon = document.getElementById('success-copy-icon');
+				icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />';
+				icon.classList.remove('text-zinc-400');
+				icon.classList.add('text-emerald-400');
+				setTimeout(() => {
+					icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />';
+					icon.classList.remove('text-emerald-400');
+					icon.classList.add('text-zinc-400');
+				}, 1500);
+			});
+		}
+
+		// =====================================================================
+		// Invite Codes
+		// =====================================================================
+		async function checkRegistrationMode() {
+			try {
+				const res = await fetch('/auth/registration-mode');
+				const data = await res.json();
+				registrationMode = data.mode;
+
+				if (registrationMode === 'invite_only') {
+					document.getElementById('invites-section').classList.remove('hidden');
+					loadInvites();
+				}
+			} catch (err) {
+				console.error('Failed to check registration mode:', err);
+			}
+		}
+
+		async function loadInvites() {
+			const container = document.getElementById('invites-list');
+			try {
+				const res = await fetch('/auth/invites');
+				const data = await res.json();
+				const invites = data.invites || [];
+
+				if (invites.length === 0) {
+					container.innerHTML = `
+						<div class="px-6 py-8 text-center text-zinc-500">
+							<svg class="h-8 w-8 mx-auto mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+							</svg>
+							No invite codes yet.
+						</div>`;
+					return;
+				}
+
+				container.innerHTML = invites.map(inv => `
+					<div class="px-6 py-4 flex items-center justify-between gap-4 hover:bg-zinc-800/50 transition-colors">
+						<div class="min-w-0 flex-1">
+							<div class="flex items-center gap-3">
+								<code class="font-medium text-violet-400 tracking-wider">${escapeHtml(inv.code)}</code>
+								${inv.used 
+									? `<span class="px-2 py-0.5 text-xs rounded-full bg-zinc-800 text-zinc-500">Used</span>` 
+									: `<span class="px-2 py-0.5 text-xs rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Available</span>`}
+							</div>
+							<div class="text-sm text-zinc-500 mt-1">
+								Created ${formatDate(inv.createdAt)}
+								${inv.usedAt ? ` · Used ${formatDate(inv.usedAt)}` : ''}
+							</div>
+						</div>
+						${!inv.used ? `
+							<div class="flex items-center gap-2">
+								<button onclick="copyInviteCode('${escapeHtml(inv.code)}')" 
+									class="p-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors"
+									title="Copy code">
+									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+									</svg>
+								</button>
+								<button onclick="revokeInvite('${escapeHtml(inv.code)}')" 
+									class="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+									title="Revoke code">
+									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+									</svg>
+								</button>
+							</div>
+						` : ''}
+					</div>
+				`).join('');
+			} catch (err) {
+				container.innerHTML = `<div class="px-6 py-8 text-center text-red-400">Failed to load invites</div>`;
+			}
+		}
+
+		async function createInvite() {
+			const btn = document.getElementById('create-invite-btn');
+			btn.disabled = true;
+			btn.textContent = 'Creating...';
+
+			try {
+				const res = await fetch('/auth/invites', { method: 'POST' });
+				const data = await res.json();
+				if (!res.ok) throw new Error(data.error || 'Failed to create invite');
+				loadInvites();
+			} catch (err) {
+				alert(err.message);
+			} finally {
+				btn.disabled = false;
+				btn.textContent = '+ Create Invite';
+			}
+		}
+
+		function copyInviteCode(code) {
+			navigator.clipboard.writeText(code).then(() => {
+				// Brief visual feedback could be added here
+			});
+		}
+
+		async function revokeInvite(code) {
+			if (!confirm(`Revoke invite code ${code}?`)) return;
+			
+			try {
+				const res = await fetch(`/auth/invites/${encodeURIComponent(code)}`, { method: 'DELETE' });
+				if (!res.ok) {
+					const data = await res.json();
+					throw new Error(data.error || 'Failed to revoke');
+				}
+				loadInvites();
+			} catch (err) {
+				alert(err.message);
+			}
+		}
+
+		// =====================================================================
+		// Utilities
+		// =====================================================================
+		function escapeHtml(str) {
+			const div = document.createElement('div');
+			div.textContent = str;
+			return div.innerHTML;
+		}
+
+		function formatDate(dateStr) {
+			const date = new Date(dateStr);
+			const now = new Date();
+			const diffMs = now - date;
+			const diffMins = Math.floor(diffMs / 60000);
+			const diffHours = Math.floor(diffMs / 3600000);
+			const diffDays = Math.floor(diffMs / 86400000);
+
+			if (diffMins < 1) return 'just now';
+			if (diffMins < 60) return `${diffMins}m ago`;
+			if (diffHours < 24) return `${diffHours}h ago`;
+			if (diffDays < 7) return `${diffDays}d ago`;
+			return date.toLocaleDateString();
+		}
+
+		// =====================================================================
+		// Initialize
+		// =====================================================================
+		loadUser();
+		loadMappings();
+		checkRegistrationMode();
+	</script>
+</body>
+</html>

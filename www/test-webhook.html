@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Test Webhook - GitHub Discord Webhook</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<script>
+		tailwind.config = {
+			darkMode: 'class',
+			theme: {
+				extend: {
+					fontFamily: {
+						sans: ['JetBrains Mono', 'monospace'],
+					},
+				},
+			},
+		}
+	</script>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<style>
+		body { font-family: 'JetBrains Mono', monospace; }
+	</style>
+</head>
+<body class="min-h-full bg-zinc-950 text-zinc-100">
+	<div class="min-h-full">
+		<!-- Navigation -->
+		<nav class="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm sticky top-0 z-50">
+			<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+				<div class="flex h-16 items-center justify-between">
+					<div class="flex items-center gap-3">
+						<div class="h-9 w-9 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+							<svg class="h-5 w-5 text-zinc-950" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+							</svg>
+						</div>
+						<span class="text-lg font-semibold">Test Webhook</span>
+					</div>
+					<div class="flex items-center gap-4">
+						<a href="/dashboard.html" class="text-sm text-zinc-400 hover:text-zinc-200 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800">
+							Dashboard
+						</a>
+						<span id="username" class="text-sm text-zinc-400"></span>
+						<button onclick="handleLogout()" 
+							class="text-sm text-zinc-400 hover:text-zinc-200 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800">
+							Sign out
+						</button>
+					</div>
+				</div>
+			</div>
+		</nav>
+
+		<!-- Main content -->
+		<main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+			<div class="mb-6">
+				<h1 class="text-2xl font-bold mb-2">Test Discord Webhook</h1>
+				<p class="text-zinc-500">Send a test embed to your Discord webhook with all available fields</p>
+			</div>
+
+			<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+				<!-- Form -->
+				<div class="lg:col-span-2 space-y-6">
+					<form id="test-form" onsubmit="handleTestWebhook(event)" class="space-y-6">
+						<!-- Webhook URL -->
+						<div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+							<h2 class="text-lg font-semibold mb-4">Webhook URL</h2>
+							<div>
+								<label class="block text-sm font-medium text-zinc-300 mb-1.5">Discord Webhook URL</label>
+								<input type="url" id="webhook-url" required placeholder="https://discord.com/api/webhooks/..."
+									class="w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 text-sm font-mono">
+							</div>
+						</div>
+
+						<!-- Basic Fields -->
+						<div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+							<h2 class="text-lg font-semibold mb-4">Basic Fields</h2>
+							<div class="space-y-4">
+								<div>
+									<label class="block text-sm font-medium text-zinc-300 mb-1.5">Title</label>
+									<input type="text" id="embed-title" placeholder="Embed Title"
+										class="w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 text-sm">
+								</div>
+								<div>
+									<label class="block text-sm font-medium text-zinc-300 mb-1.5">Description</label>
+									<textarea id="embed-description" rows="3" placeholder="Embed description text..."
+										class="w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 text-sm resize-none"></textarea>
+								</div>
+								<div class="grid grid-cols-2 gap-4">
+									<div>
+										<label class="block text-sm font-medium text-zinc-300 mb-1.5">URL</label>
+										<input type="url" id="embed-url" placeholder="https://example.com"
+											class="w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 text-sm font-mono text-xs">
+									</div>
+									<div>
+										<label class="block text-sm font-medium text-zinc-300 mb-1.5">Color (hex)</label>
+										<input type="text" id="embed-color" placeholder="#238636" pattern="#[0-9A-Fa-f]{6}"
+											class="w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 text-sm font-mono">
+									</div>
+								</div>
+								<div>
+									<label class="block text-sm font-medium text-zinc-300 mb-1.5">Timestamp</label>
+									<input type="datetime-local" id="embed-timestamp"
+										class="w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 focus:ring-2 focus:ring-inset focus:ring-emerald-500 text-sm">
+									<p class="mt-1 text-xs text-zinc-500">Leave empty to use current time</p>
+								</div>
+							</div>
+						</div>
+
+						<!-- Author -->
+						<div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+							<h2 class="text-lg font-semibold mb-4">Author</h2>
+							<div class="space-y-4">
+								<div>
+									<label class="block text-sm font-medium text-zinc-300 mb-1.5">Name</label>
+									<input type="text" id="author-name" placeholder="Author Name"
+										class="w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 text-sm">
+								</div>
+								<div class="grid grid-cols-2 gap-4">
+									<div>
+										<label class="block text-sm font-medium text-zinc-300 mb-1.5">URL</label>
+										<input type="url" id="author-url" placeholder="https://example.com"
+											class="w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 text-sm font-mono text-xs">
+									</div>
+									<div>
+										<label class="block text-sm font-medium text-zinc-300 mb-1.5">Icon URL</label>
+										<input type="url" id="author-icon-url" placeholder="https://example.com/icon.png"
+											class="w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 text-sm font-mono text-xs">
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<!-- Footer -->
+						<div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+							<h2 class="text-lg font-semibold mb-4">Footer</h2>
+							<div class="space-y-4">
+								<div>
+									<label class="block text-sm font-medium text-zinc-300 mb-1.5">Text</label>
+									<input type="text" id="footer-text" placeholder="Footer text"
+										class="w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 text-sm">
+								</div>
+								<div>
+									<label class="block text-sm font-medium text-zinc-300 mb-1.5">Icon URL</label>
+									<input type="url" id="footer-icon-url" placeholder="https://example.com/icon.png"
+										class="w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 text-sm font-mono text-xs">
+								</div>
+							</div>
+						</div>
+
+						<!-- Image & Thumbnail -->
+						<div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+							<h2 class="text-lg font-semibold mb-4">Image & Thumbnail</h2>
+							<div class="space-y-4">
+								<div>
+									<label class="block text-sm font-medium text-zinc-300 mb-1.5">Image URL</label>
+									<input type="url" id="image-url" placeholder="https://example.com/image.png"
+										class="w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 text-sm font-mono text-xs">
+								</div>
+								<div>
+									<label class="block text-sm font-medium text-zinc-300 mb-1.5">Thumbnail URL</label>
+									<input type="url" id="thumbnail-url" placeholder="https://example.com/thumb.png"
+										class="w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 text-sm font-mono text-xs">
+								</div>
+							</div>
+						</div>
+
+						<!-- Fields -->
+						<div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+							<div class="flex items-center justify-between mb-4">
+								<h2 class="text-lg font-semibold">Fields</h2>
+								<button type="button" onclick="addField()"
+									class="px-3 py-1.5 text-sm font-medium rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors border border-emerald-500/20">
+									+ Add Field
+								</button>
+							</div>
+							<div id="fields-container" class="space-y-4">
+								<!-- Fields will be added here dynamically -->
+							</div>
+						</div>
+
+						<!-- Examples -->
+						<div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+							<h2 class="text-lg font-semibold mb-4">Examples</h2>
+							<div class="space-y-2">
+								<button type="button" onclick="loadExample('github-pr')"
+									class="w-full text-left px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors text-sm">
+									<span class="font-medium">GitHub PR Example</span>
+									<p class="text-xs text-zinc-500 mt-0.5">Pull request opened/closed notification</p>
+								</button>
+								<button type="button" onclick="loadExample('success')"
+									class="w-full text-left px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors text-sm">
+									<span class="font-medium">Success Notification</span>
+									<p class="text-xs text-zinc-500 mt-0.5">Deployment success with fields</p>
+								</button>
+								<button type="button" onclick="loadExample('error')"
+									class="w-full text-left px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors text-sm">
+									<span class="font-medium">Error Alert</span>
+									<p class="text-xs text-zinc-500 mt-0.5">Error notification with author and footer</p>
+								</button>
+								<button type="button" onclick="loadExample('minimal')"
+									class="w-full text-left px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors text-sm">
+									<span class="font-medium">Minimal Example</span>
+									<p class="text-xs text-zinc-500 mt-0.5">Just title and description</p>
+								</button>
+							</div>
+						</div>
+
+						<!-- Submit -->
+						<div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+							<div id="form-error" class="hidden text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-4"></div>
+							<div id="form-success" class="hidden text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 mb-4"></div>
+							<button type="submit" id="submit-btn"
+								class="w-full py-3 px-4 rounded-lg text-sm font-semibold text-zinc-950 bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
+								Send Test Webhook
+							</button>
+						</div>
+					</form>
+				</div>
+
+				<!-- Preview -->
+				<div class="lg:col-span-1">
+					<div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sticky top-24">
+						<h2 class="text-lg font-semibold mb-4">Preview</h2>
+						<div id="preview-container" class="text-sm text-zinc-500">
+							<p>Fill in the form to see a JSON preview</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</main>
+	</div>
+
+	<script>
+		let fieldCount = 0;
+
+		// =====================================================================
+		// Auth
+		// =====================================================================
+		async function loadUser() {
+			try {
+				const res = await fetch('/auth/me');
+				if (!res.ok) {
+					window.location.href = '/';
+					return;
+				}
+				const user = await res.json();
+				document.getElementById('username').textContent = user.username;
+			} catch {
+				window.location.href = '/';
+			}
+		}
+
+		async function handleLogout() {
+			await fetch('/auth/logout', { method: 'POST' });
+			window.location.href = '/';
+		}
+
+		// =====================================================================
+		// Form Handling
+		// =====================================================================
+		function addField() {
+			const container = document.getElementById('fields-container');
+			const id = `field-${fieldCount++}`;
+			const fieldHtml = `
+				<div class="bg-zinc-800 rounded-lg p-4 space-y-3" data-field-id="${id}">
+					<div class="flex items-center justify-between">
+						<span class="text-sm font-medium text-zinc-300">Field ${fieldCount}</span>
+						<button type="button" onclick="removeField('${id}')" class="text-zinc-500 hover:text-red-400 transition-colors">
+							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						</button>
+					</div>
+					<div>
+						<label class="block text-xs font-medium text-zinc-400 mb-1">Name</label>
+						<input type="text" data-field-name class="w-full rounded-lg border-0 bg-zinc-700 py-2 px-3 text-zinc-100 ring-1 ring-inset ring-zinc-600 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 text-sm" placeholder="Field name">
+					</div>
+					<div>
+						<label class="block text-xs font-medium text-zinc-400 mb-1">Value</label>
+						<textarea data-field-value rows="2" class="w-full rounded-lg border-0 bg-zinc-700 py-2 px-3 text-zinc-100 ring-1 ring-inset ring-zinc-600 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 text-sm resize-none" placeholder="Field value"></textarea>
+					</div>
+					<div>
+						<label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
+							<input type="checkbox" data-field-inline class="rounded border-zinc-600 bg-zinc-700 text-emerald-500 focus:ring-emerald-500">
+							Inline field
+						</label>
+					</div>
+				</div>
+			`;
+			container.insertAdjacentHTML('beforeend', fieldHtml);
+			updatePreview();
+		}
+
+		function removeField(id) {
+			const field = document.querySelector(`[data-field-id="${id}"]`);
+			if (field) field.remove();
+			updatePreview();
+		}
+
+		function hexToDecimal(hex) {
+			if (!hex) return undefined;
+			const cleaned = hex.replace('#', '');
+			return parseInt(cleaned, 16);
+		}
+
+		function buildEmbed() {
+			const embed = {};
+
+			// Basic fields
+			const title = document.getElementById('embed-title').value.trim();
+			const description = document.getElementById('embed-description').value.trim();
+			const url = document.getElementById('embed-url').value.trim();
+			const colorHex = document.getElementById('embed-color').value.trim();
+			const timestamp = document.getElementById('embed-timestamp').value;
+
+			if (title) embed.title = title;
+			if (description) embed.description = description;
+			if (url) embed.url = url;
+			if (colorHex) embed.color = hexToDecimal(colorHex);
+			if (timestamp) {
+				embed.timestamp = new Date(timestamp).toISOString();
+			} else {
+				embed.timestamp = new Date().toISOString();
+			}
+
+			// Author
+			const authorName = document.getElementById('author-name').value.trim();
+			const authorUrl = document.getElementById('author-url').value.trim();
+			const authorIconUrl = document.getElementById('author-icon-url').value.trim();
+			if (authorName || authorUrl || authorIconUrl) {
+				embed.author = {};
+				if (authorName) embed.author.name = authorName;
+				if (authorUrl) embed.author.url = authorUrl;
+				if (authorIconUrl) embed.author.icon_url = authorIconUrl;
+			}
+
+			// Footer
+			const footerText = document.getElementById('footer-text').value.trim();
+			const footerIconUrl = document.getElementById('footer-icon-url').value.trim();
+			if (footerText || footerIconUrl) {
+				embed.footer = {};
+				if (footerText) embed.footer.text = footerText;
+				if (footerIconUrl) embed.footer.icon_url = footerIconUrl;
+			}
+
+			// Image & Thumbnail
+			const imageUrl = document.getElementById('image-url').value.trim();
+			const thumbnailUrl = document.getElementById('thumbnail-url').value.trim();
+			if (imageUrl) embed.image = { url: imageUrl };
+			if (thumbnailUrl) embed.thumbnail = { url: thumbnailUrl };
+
+			// Fields
+			const fieldElements = document.querySelectorAll('[data-field-id]');
+			const fields = [];
+			fieldElements.forEach(el => {
+				const name = el.querySelector('[data-field-name]').value.trim();
+				const value = el.querySelector('[data-field-value]').value.trim();
+				const inline = el.querySelector('[data-field-inline]').checked;
+				if (name && value) {
+					fields.push({ name, value, inline });
+				}
+			});
+			if (fields.length > 0) embed.fields = fields;
+
+			return embed;
+		}
+
+		function updatePreview() {
+			const embed = buildEmbed();
+			const container = document.getElementById('preview-container');
+			container.innerHTML = `<pre class="text-xs bg-zinc-800 rounded-lg p-4 overflow-auto max-h-96"><code>${JSON.stringify(embed, null, 2)}</code></pre>`;
+		}
+
+		// Update preview on input
+		document.addEventListener('DOMContentLoaded', () => {
+			const inputs = document.querySelectorAll('input, textarea');
+			inputs.forEach(input => {
+				input.addEventListener('input', updatePreview);
+				input.addEventListener('change', updatePreview);
+			});
+			updatePreview();
+		});
+
+		async function handleTestWebhook(e) {
+			e.preventDefault();
+			const errorEl = document.getElementById('form-error');
+			const successEl = document.getElementById('form-success');
+			const submitBtn = document.getElementById('submit-btn');
+
+			errorEl.classList.add('hidden');
+			successEl.classList.add('hidden');
+			submitBtn.disabled = true;
+			submitBtn.textContent = 'Sending...';
+
+			try {
+				const webhookUrl = document.getElementById('webhook-url').value.trim();
+				const embed = buildEmbed();
+
+				if (!embed.title && !embed.description && (!embed.fields || embed.fields.length === 0)) {
+					throw new Error('Embed must have at least title, description, or fields');
+				}
+
+				const res = await fetch('/webhooks/test', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ webhookUrl, embed }),
+				});
+
+				const data = await res.json();
+
+				if (!res.ok) {
+					throw new Error(data.error || 'Failed to send webhook');
+				}
+
+				successEl.textContent = 'Webhook sent successfully! Check your Discord channel.';
+				successEl.classList.remove('hidden');
+			} catch (err) {
+				errorEl.textContent = err.message;
+				errorEl.classList.remove('hidden');
+			} finally {
+				submitBtn.disabled = false;
+				submitBtn.textContent = 'Send Test Webhook';
+			}
+		}
+
+		// =====================================================================
+		// Examples
+		// =====================================================================
+		function loadExample(type) {
+			// Clear fields first
+			document.getElementById('fields-container').innerHTML = '';
+			fieldCount = 0;
+
+			if (type === 'github-pr') {
+				document.getElementById('embed-title').value = 'PR #42 Opened: Add new feature';
+				document.getElementById('embed-description').value = 'by alice';
+				document.getElementById('embed-url').value = 'https://github.com/owner/repo/pull/42';
+				document.getElementById('embed-color').value = '#238636';
+				document.getElementById('footer-text').value = 'owner/repo';
+				document.getElementById('author-name').value = 'alice';
+				document.getElementById('author-icon-url').value = 'https://github.com/alice.png';
+			} else if (type === 'success') {
+				document.getElementById('embed-title').value = '✅ Deployment Successful';
+				document.getElementById('embed-description').value = 'Production deployment completed successfully';
+				document.getElementById('embed-color').value = '#238636';
+				document.getElementById('footer-text').value = 'Deployment System';
+				addField();
+				document.querySelector('[data-field-name]').value = 'Environment';
+				document.querySelector('[data-field-value]').value = 'Production';
+				addField();
+				const fields = document.querySelectorAll('[data-field-name]');
+				fields[fields.length - 1].value = 'Version';
+				document.querySelectorAll('[data-field-value]')[fields.length - 1].value = 'v1.2.3';
+			} else if (type === 'error') {
+				document.getElementById('embed-title').value = '❌ Build Failed';
+				document.getElementById('embed-description').value = 'The build process encountered an error';
+				document.getElementById('embed-color').value = '#dc2626';
+				document.getElementById('author-name').value = 'CI/CD System';
+				document.getElementById('footer-text').value = 'Build #1234';
+				addField();
+				document.querySelector('[data-field-name]').value = 'Error';
+				document.querySelector('[data-field-value]').value = 'TypeError: Cannot read property of undefined';
+			} else if (type === 'minimal') {
+				document.getElementById('embed-title').value = 'Hello World';
+				document.getElementById('embed-description').value = 'This is a minimal embed example';
+			}
+
+			updatePreview();
+		}
+
+		// Initialize
+		loadUser();
+	</script>
+</body>
+</html>

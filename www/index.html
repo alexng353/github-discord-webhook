@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Login - GitHub Discord Webhook</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<script>
+		tailwind.config = {
+			darkMode: 'class',
+			theme: {
+				extend: {
+					fontFamily: {
+						sans: ['JetBrains Mono', 'monospace'],
+					},
+				},
+			},
+		}
+	</script>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<style>
+		body { font-family: 'JetBrains Mono', monospace; }
+	</style>
+</head>
+<body class="min-h-full bg-zinc-950 text-zinc-100">
+	<div class="min-h-full flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
+		<div class="sm:mx-auto sm:w-full sm:max-w-md">
+			<div class="flex justify-center">
+				<div class="h-16 w-16 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/25">
+					<svg class="h-9 w-9 text-zinc-950" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+					</svg>
+				</div>
+			</div>
+			<h2 class="mt-6 text-center text-2xl font-bold tracking-tight">
+				GitHub → Discord
+			</h2>
+			<p class="mt-2 text-center text-sm text-zinc-500">
+				Webhook notification service
+			</p>
+		</div>
+
+		<div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+			<div class="bg-zinc-900 border border-zinc-800 py-8 px-6 shadow-xl rounded-2xl">
+				<!-- Tab switcher -->
+				<div class="flex mb-6 bg-zinc-800 rounded-lg p-1">
+					<button id="tab-login" onclick="showTab('login')" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all bg-zinc-700 text-zinc-100">
+						Sign in
+					</button>
+					<button id="tab-register" onclick="showTab('register')" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all text-zinc-400 hover:text-zinc-200">
+						Register
+					</button>
+				</div>
+
+				<!-- Login form -->
+				<form id="form-login" class="space-y-5" onsubmit="handleLogin(event)">
+					<div>
+						<label for="login-username" class="block text-sm font-medium text-zinc-300">Username</label>
+						<input type="text" id="login-username" name="username" required autocomplete="username"
+							class="mt-1.5 block w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 transition-all text-sm">
+					</div>
+
+					<div>
+						<label for="login-password" class="block text-sm font-medium text-zinc-300">Password</label>
+						<input type="password" id="login-password" name="password" required autocomplete="current-password"
+							class="mt-1.5 block w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 transition-all text-sm">
+					</div>
+
+					<div id="login-error" class="hidden text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2"></div>
+
+					<button type="submit" id="login-submit"
+						class="w-full flex justify-center py-2.5 px-4 rounded-lg text-sm font-semibold text-zinc-950 bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 focus:ring-offset-zinc-900 transition-all shadow-lg shadow-emerald-500/20">
+						Sign in
+					</button>
+				</form>
+
+				<!-- Register form -->
+				<form id="form-register" class="space-y-5 hidden" onsubmit="handleRegister(event)">
+					<div id="invite-code-field" class="hidden">
+						<label for="register-invite" class="block text-sm font-medium text-zinc-300">Invite Code</label>
+						<input type="text" id="register-invite" name="inviteCode" autocomplete="off"
+							class="mt-1.5 block w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 transition-all text-sm font-mono tracking-wider"
+							placeholder="Enter invite code">
+					</div>
+
+					<div>
+						<label for="register-username" class="block text-sm font-medium text-zinc-300">Username</label>
+						<input type="text" id="register-username" name="username" required autocomplete="username" minlength="3"
+							class="mt-1.5 block w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 transition-all text-sm"
+							placeholder="min 3 characters">
+					</div>
+
+					<div>
+						<label for="register-password" class="block text-sm font-medium text-zinc-300">Password</label>
+						<input type="password" id="register-password" name="password" required autocomplete="new-password" minlength="8"
+							class="mt-1.5 block w-full rounded-lg border-0 bg-zinc-800 py-2.5 px-3.5 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-emerald-500 transition-all text-sm"
+							placeholder="min 8 characters">
+					</div>
+
+					<div id="register-closed" class="hidden text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+						Registration is currently closed.
+					</div>
+					<div id="register-error" class="hidden text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2"></div>
+					<div id="register-success" class="hidden text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2"></div>
+
+					<button type="submit" id="register-submit"
+						class="w-full flex justify-center py-2.5 px-4 rounded-lg text-sm font-semibold text-zinc-950 bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 focus:ring-offset-zinc-900 transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
+						Create account
+					</button>
+				</form>
+			</div>
+		</div>
+
+		<p class="mt-8 text-center text-xs text-zinc-600">
+			Receive GitHub events as Discord notifications
+		</p>
+	</div>
+
+	<script>
+		function showTab(tab) {
+			const loginTab = document.getElementById('tab-login');
+			const registerTab = document.getElementById('tab-register');
+			const loginForm = document.getElementById('form-login');
+			const registerForm = document.getElementById('form-register');
+
+			if (tab === 'login') {
+				loginTab.classList.add('bg-zinc-700', 'text-zinc-100');
+				loginTab.classList.remove('text-zinc-400');
+				registerTab.classList.remove('bg-zinc-700', 'text-zinc-100');
+				registerTab.classList.add('text-zinc-400');
+				loginForm.classList.remove('hidden');
+				registerForm.classList.add('hidden');
+			} else {
+				registerTab.classList.add('bg-zinc-700', 'text-zinc-100');
+				registerTab.classList.remove('text-zinc-400');
+				loginTab.classList.remove('bg-zinc-700', 'text-zinc-100');
+				loginTab.classList.add('text-zinc-400');
+				registerForm.classList.remove('hidden');
+				loginForm.classList.add('hidden');
+			}
+
+			// Clear errors
+			document.getElementById('login-error').classList.add('hidden');
+			document.getElementById('register-error').classList.add('hidden');
+			document.getElementById('register-success').classList.add('hidden');
+		}
+
+		async function handleLogin(e) {
+			e.preventDefault();
+			const errorEl = document.getElementById('login-error');
+			const submitBtn = document.getElementById('login-submit');
+			
+			errorEl.classList.add('hidden');
+			submitBtn.disabled = true;
+			submitBtn.textContent = 'Signing in...';
+
+			try {
+				const res = await fetch('/auth/login', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						username: document.getElementById('login-username').value,
+						password: document.getElementById('login-password').value,
+					}),
+				});
+
+				const data = await res.json();
+
+				if (!res.ok) {
+					throw new Error(data.error || 'Login failed');
+				}
+
+				window.location.href = '/dashboard.html';
+			} catch (err) {
+				errorEl.textContent = err.message;
+				errorEl.classList.remove('hidden');
+			} finally {
+				submitBtn.disabled = false;
+				submitBtn.textContent = 'Sign in';
+			}
+		}
+
+		let registrationMode = 'open';
+
+		async function handleRegister(e) {
+			e.preventDefault();
+			const errorEl = document.getElementById('register-error');
+			const successEl = document.getElementById('register-success');
+			const submitBtn = document.getElementById('register-submit');
+			
+			errorEl.classList.add('hidden');
+			successEl.classList.add('hidden');
+			submitBtn.disabled = true;
+			submitBtn.textContent = 'Creating account...';
+
+			try {
+				const body = {
+					username: document.getElementById('register-username').value,
+					password: document.getElementById('register-password').value,
+				};
+
+				// Include invite code if in invite_only mode
+				if (registrationMode === 'invite_only') {
+					body.inviteCode = document.getElementById('register-invite').value;
+				}
+
+				const res = await fetch('/auth/register', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(body),
+				});
+
+				const data = await res.json();
+
+				if (!res.ok) {
+					throw new Error(data.error || 'Registration failed');
+				}
+
+				successEl.textContent = 'Account created! You can now sign in.';
+				successEl.classList.remove('hidden');
+				
+				// Clear form and switch to login after a moment
+				document.getElementById('form-register').reset();
+				setTimeout(() => showTab('login'), 1500);
+			} catch (err) {
+				errorEl.textContent = err.message;
+				errorEl.classList.remove('hidden');
+			} finally {
+				submitBtn.disabled = false;
+				submitBtn.textContent = 'Create account';
+			}
+		}
+
+		// Check registration mode and configure UI
+		async function checkRegistrationMode() {
+			try {
+				const res = await fetch('/auth/registration-mode');
+				const data = await res.json();
+				registrationMode = data.mode;
+
+				const inviteField = document.getElementById('invite-code-field');
+				const inviteInput = document.getElementById('register-invite');
+				const closedMsg = document.getElementById('register-closed');
+				const submitBtn = document.getElementById('register-submit');
+				const registerTab = document.getElementById('tab-register');
+
+				if (registrationMode === 'closed') {
+					closedMsg.classList.remove('hidden');
+					submitBtn.disabled = true;
+					registerTab.classList.add('opacity-50');
+				} else if (registrationMode === 'invite_only') {
+					inviteField.classList.remove('hidden');
+					inviteInput.required = true;
+				}
+			} catch (err) {
+				console.error('Failed to check registration mode:', err);
+			}
+		}
+
+		// Check if already logged in
+		fetch('/auth/me').then(res => {
+			if (res.ok) window.location.href = '/dashboard.html';
+		});
+
+		// Check registration mode on load
+		checkRegistrationMode();
+	</script>
+</body>
+</html>
