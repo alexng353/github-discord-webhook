@@ -50,9 +50,45 @@ export const editedSchema = z.object({
 	action: z.literal("edited"),
 });
 
+export const convertedToDraftSchema = z.object({
+	action: z.literal("converted_to_draft"),
+	repository: z.object({
+		name: z.string().optional().nullable().default("Unknown"),
+		full_name: z.string().optional().nullable().default("Unknown"),
+	}),
+	pull_request: z.object({
+		number: z.number(),
+		title: z.string(),
+		html_url: z.string(),
+		user: userSchema,
+		body: z.string().optional().nullable(),
+		draft: z.literal(true),
+	}),
+});
+
+export const readyForReviewSchema = z.object({
+	action: z.literal("ready_for_review"),
+	repository: z.object({
+		name: z.string().optional().nullable().default("Unknown"),
+		full_name: z.string().optional().nullable().default("Unknown"),
+	}),
+	pull_request: z.object({
+		number: z.number(),
+		title: z.string(),
+		html_url: z.string(),
+		user: userSchema,
+		body: z.string().optional().nullable(),
+		draft: z.literal(false),
+	}),
+});
+
 export const githubWebhookSchema = z.discriminatedUnion("action", [
 	openSchema,
 	closedSchema,
 	synchronizeSchema,
 	editedSchema,
+	convertedToDraftSchema,
+	readyForReviewSchema,
 ]);
+
+export type GithubWebhookPayload = z.infer<typeof githubWebhookSchema>;

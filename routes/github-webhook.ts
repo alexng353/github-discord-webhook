@@ -1,15 +1,25 @@
 import { Hono } from "hono";
-import type { z } from "zod";
 import { type DiscordEmbed, sendDiscordEmbed } from "../lib/discord";
 import { filterBody } from "../lib/filterBody";
 import { verifyGitHubSignature } from "../middleware/github-signature";
-import { githubWebhookSchema } from "../schemas/github";
+import {
+	type GithubWebhookPayload,
+	githubWebhookSchema,
+} from "../schemas/github";
 
 const githubWebhookApp = new Hono();
 
 // Type helpers for discriminated union
-type OpenPayload = z.infer<typeof githubWebhookSchema> & { action: "opened" };
-type ClosedPayload = z.infer<typeof githubWebhookSchema> & { action: "closed" };
+type OpenPayload = Extract<GithubWebhookPayload, { action: "opened" }>;
+type ClosedPayload = Extract<GithubWebhookPayload, { action: "closed" }>;
+type ConvertedToDraftPayload = Extract<
+	GithubWebhookPayload,
+	{ action: "converted_to_draft" }
+>;
+type ReadyForReviewPayload = Extract<
+	GithubWebhookPayload,
+	{ action: "ready_for_review" }
+>;
 
 // Callback for "opened" action - returns DiscordEmbed
 function handleOpened(payload: OpenPayload): DiscordEmbed {
@@ -80,6 +90,62 @@ function handleClosed(payload: ClosedPayload): DiscordEmbed {
 	};
 }
 
+// Callback for "converted_to_draft" action - returns DiscordEmbed
+function handleConvertedToDraft(
+	payload: ConvertedToDraftPayload,
+): DiscordEmbed {
+	const pr = payload.pull_request;
+	const repoFullName = payload.repository?.full_name ?? "Unknown";
+
+	return {
+		title: `[${payload.repository.name}]: PR #${pr?.number} Converted to Draft: ${pr?.title ?? "Unknown"}`,
+		description: pr?.body ? filterBody(pr.body) : "No description",
+		url: pr?.html_url,
+		color: 0x6e7681, // gray for draft
+		footer: { text: repoFullName },
+		timestamp: new Date().toISOString(),
+		author: {
+			name: pr.user.login,
+			url: pr.user.url,
+			icon_url: pr.user.avatar_url,
+		},
+		fields: [
+			{
+				name: "Author",
+				value: pr.user.login,
+				inline: false,
+			},
+		],
+	};
+}
+
+// Callback for "ready_for_review" action - returns DiscordEmbed
+function handleReadyForReview(payload: ReadyForReviewPayload): DiscordEmbed {
+	const pr = payload.pull_request;
+	const repoFullName = payload.repository?.full_name ?? "Unknown";
+
+	return {
+		title: `[${payload.repository.name}]: PR #${pr?.number} Ready for Review: ${pr?.title ?? "Unknown"}`,
+		description: pr?.body ? filterBody(pr.body) : "No description",
+		url: pr?.html_url,
+		color: 0x238636, // green for ready
+		footer: { text: repoFullName },
+		timestamp: new Date().toISOString(),
+		author: {
+			name: pr.user.login,
+			url: pr.user.url,
+			icon_url: pr.user.avatar_url,
+		},
+		fields: [
+			{
+				name: "Author",
+				value: pr.user.login,
+				inline: false,
+			},
+		],
+	};
+}
+
 // POST /webhook/github/:id
 // Main GitHub webhook receiver endpoint
 // Each webhook mapping gets a unique URL with its ID
@@ -135,6 +201,12 @@ githubWebhookApp.post("/github/:id", async (c) => {
 			break;
 		case "closed":
 			embed = handleClosed(parsedBody);
+			break;
+		case "converted_to_draft":
+			embed = handleConvertedToDraft(parsedBody);
+			break;
+		case "ready_for_review":
+			embed = handleReadyForReview(parsedBody);
 			break;
 		case "synchronize":
 			return c.json({
