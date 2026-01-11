@@ -19,6 +19,7 @@ export const openSchema = z.object({
 		html_url: z.string(),
 		user: userSchema,
 		body: z.string().optional().nullable(),
+		draft: z.boolean().optional().default(false),
 	}),
 });
 

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { colors } from "../lib/colors";
 import { type DiscordEmbed, sendDiscordEmbed } from "../lib/discord";
 import { filterBody } from "../lib/filterBody";
 import { verifyGitHubSignature } from "../middleware/github-signature";
@@ -25,12 +26,13 @@ type ReadyForReviewPayload = Extract<
 function handleOpened(payload: OpenPayload): DiscordEmbed {
 	const pr = payload.pull_request;
 	const repoFullName = payload.repository?.full_name ?? "Unknown";
+	const isDraft = pr.draft ?? false;
 
 	return {
-		title: `[${payload.repository.name}]: PR #${pr?.number} Opened: ${pr?.title ?? "Unknown"}`,
+		title: `[${payload.repository.name}]: ${isDraft ? "Draft " : ""}PR #${pr?.number} Opened: ${pr?.title ?? "Unknown"}`,
 		description: pr?.body ? filterBody(pr.body) : "No description",
 		url: pr?.html_url,
-		color: 0x238636, // green for opened
+		color: isDraft ? colors.gray : colors.green,
 		footer: { text: repoFullName },
 		timestamp: new Date().toISOString(),
 		author: {
@@ -63,7 +65,7 @@ function handleClosed(payload: ClosedPayload): DiscordEmbed {
 			icon_url: pr.user.avatar_url,
 		},
 		url: pr?.html_url,
-		color: isMerged ? 0x8957e5 : 0xcb2431, // purple for merged, red for closed
+		color: isMerged ? colors.purple : colors.red,
 		footer: { text: repoFullName },
 		timestamp: pr?.closed_at?.toISOString() ?? new Date().toISOString(),
 		fields: [
@@ -101,7 +103,7 @@ function handleConvertedToDraft(
 		title: `[${payload.repository.name}]: PR #${pr?.number} Converted to Draft: ${pr?.title ?? "Unknown"}`,
 		description: pr?.body ? filterBody(pr.body) : "No description",
 		url: pr?.html_url,
-		color: 0x6e7681, // gray for draft
+		color: colors.gray,
 		footer: { text: repoFullName },
 		timestamp: new Date().toISOString(),
 		author: {
@@ -128,7 +130,7 @@ function handleReadyForReview(payload: ReadyForReviewPayload): DiscordEmbed {
 		title: `[${payload.repository.name}]: PR #${pr?.number} Ready for Review: ${pr?.title ?? "Unknown"}`,
 		description: pr?.body ? filterBody(pr.body) : "No description",
 		url: pr?.html_url,
-		color: 0x238636, // green for ready
+		color: colors.green,
 		footer: { text: repoFullName },
 		timestamp: new Date().toISOString(),
 		author: {
