@@ -93,3 +93,32 @@ export const githubWebhookSchema = z.discriminatedUnion("action", [
 ]);
 
 export type GithubWebhookPayload = z.infer<typeof githubWebhookSchema>;
+
+// Pull Request Review schemas
+export const pullRequestReviewSubmittedSchema = z.object({
+	action: z.literal("submitted"),
+	review: z.object({
+		id: z.number(),
+		state: z.enum(["approved", "changes_requested", "commented"]),
+		body: z.string().nullable(),
+		html_url: z.string(),
+		user: userSchema,
+		submitted_at: z.coerce.date(),
+	}),
+	pull_request: z.object({
+		number: z.number(),
+		title: z.string(),
+		html_url: z.string(),
+		user: userSchema,
+	}),
+	repository: z.object({
+		name: z.string().optional().nullable().default("Unknown"),
+		full_name: z.string().optional().nullable().default("Unknown"),
+	}),
+});
+
+export const pullRequestReviewSchema = z.discriminatedUnion("action", [
+	pullRequestReviewSubmittedSchema,
+]);
+
+export type PullRequestReviewPayload = z.infer<typeof pullRequestReviewSchema>;

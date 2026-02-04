@@ -6,6 +6,8 @@ import { verifyGitHubSignature } from "../middleware/github-signature";
 import {
 	type GithubWebhookPayload,
 	githubWebhookSchema,
+	type PullRequestReviewPayload,
+	pullRequestReviewSchema,
 } from "../schemas/github";
 
 const githubWebhookApp = new Hono();
@@ -20,6 +22,10 @@ type ConvertedToDraftPayload = Extract<
 type ReadyForReviewPayload = Extract<
 	GithubWebhookPayload,
 	{ action: "ready_for_review" }
+>;
+type ReviewSubmittedPayload = Extract<
+	PullRequestReviewPayload,
+	{ action: "submitted" }
 >;
 
 // Callback for "opened" action - returns DiscordEmbed
@@ -148,6 +154,56 @@ function handleReadyForReview(payload: ReadyForReviewPayload): DiscordEmbed {
 	};
 }
 
+// Callback for pull_request_review "submitted" action - returns DiscordEmbed
+function handleReviewSubmitted(payload: ReviewSubmittedPayload): DiscordEmbed {
+	const review = payload.review;
+	const pr = payload.pull_request;
+	const repoFullName = payload.repository?.full_name ?? "Unknown";
+
+	const stateLabels: Record<typeof review.state, string> = {
+		approved: "Approved",
+		changes_requested: "Changes Requested",
+		commented: "Commented",
+	};
+
+	const stateColors: Record<typeof review.state, number> = {
+		approved: 0x238636, // green
+		changes_requested: 0xd29922, // yellow/orange
+		commented: 0x6e7681, // gray
+	};
+
+	return {
+		title: `[${payload.repository.name}]: PR #${pr.number} Review: ${stateLabels[review.state]}`,
+		description: review.body ? filterBody(review.body) : "No comment",
+		url: review.html_url,
+		color: stateColors[review.state],
+		footer: { text: repoFullName },
+		timestamp: review.submitted_at.toISOString(),
+		author: {
+			name: review.user.login,
+			url: review.user.url,
+			icon_url: review.user.avatar_url,
+		},
+		fields: [
+			{
+				name: "PR Title",
+				value: pr.title,
+				inline: false,
+			},
+			{
+				name: "Reviewer",
+				value: review.user.login,
+				inline: true,
+			},
+			{
+				name: "PR Author",
+				value: pr.user.login,
+				inline: true,
+			},
+		],
+	};
+}
+
 // POST /webhook/github/:id
 // Main GitHub webhook receiver endpoint
 // Each webhook mapping gets a unique URL with its ID
@@ -176,50 +232,69 @@ githubWebhookApp.post("/github/:id", async (c) => {
 
 	const { body, webhookUrl, repo } = verifyResult.data;
 
-	// Only handle pull_request events for now
-	if (eventType !== "pull_request") {
+	let embed: DiscordEmbed;
+	let action: string;
+
+	if (eventType === "pull_request") {
+		const {
+			success,
+			data: parsedBody,
+			error,
+		} = githubWebhookSchema.safeParse(body);
+		if (!success) {
+			console.error("Invalid payload", error);
+			return c.json({ error: "Invalid payload" }, 400);
+		}
+
+		action = parsedBody.action;
+
+		switch (parsedBody.action) {
+			case "opened":
+				embed = handleOpened(parsedBody);
+				break;
+			case "closed":
+				embed = handleClosed(parsedBody);
+				break;
+			case "converted_to_draft":
+				embed = handleConvertedToDraft(parsedBody);
+				break;
+			case "ready_for_review":
+				embed = handleReadyForReview(parsedBody);
+				break;
+			case "synchronize":
+				return c.json({
+					ignored: true,
+					reason: `Event type '${eventType}:synchronize' not handled`,
+				});
+			case "edited":
+				return c.json({
+					ignored: true,
+					reason: `Event type '${eventType}:edited' not handled`,
+				});
+		}
+	} else if (eventType === "pull_request_review") {
+		const {
+			success,
+			data: parsedBody,
+			error,
+		} = pullRequestReviewSchema.safeParse(body);
+		if (!success) {
+			console.error("Invalid payload", error);
+			return c.json({ error: "Invalid payload" }, 400);
+		}
+
+		action = parsedBody.action;
+
+		switch (parsedBody.action) {
+			case "submitted":
+				embed = handleReviewSubmitted(parsedBody);
+				break;
+		}
+	} else {
 		return c.json({
 			ignored: true,
 			reason: `Event type '${eventType}' not handled`,
 		});
-	}
-
-	const {
-		success,
-		data: parsedBody,
-		error,
-	} = githubWebhookSchema.safeParse(body);
-	if (!success) {
-		console.error("Invalid payload", error);
-		return c.json({ error: "Invalid payload" }, 400);
-	}
-
-	// Use discriminated union to call appropriate callback
-	let embed: DiscordEmbed;
-
-	switch (parsedBody.action) {
-		case "opened":
-			embed = handleOpened(parsedBody);
-			break;
-		case "closed":
-			embed = handleClosed(parsedBody);
-			break;
-		case "converted_to_draft":
-			embed = handleConvertedToDraft(parsedBody);
-			break;
-		case "ready_for_review":
-			embed = handleReadyForReview(parsedBody);
-			break;
-		case "synchronize":
-			return c.json({
-				ignored: true,
-				reason: `Event type '${eventType}:synchronize' not handled`,
-			});
-		case "edited":
-			return c.json({
-				ignored: true,
-				reason: `Event type '${eventType}:edited' not handled`,
-			});
 	}
 
 	const result = await sendDiscordEmbed(webhookUrl, embed);
@@ -234,7 +309,7 @@ githubWebhookApp.post("/github/:id", async (c) => {
 	return c.json({
 		sent: true,
 		event: eventType,
-		action: parsedBody.action,
+		action,
 		repo,
 	});
 });
