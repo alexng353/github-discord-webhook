@@ -5,4 +5,3 @@ export const colors = {
 	purple: 0x8957e5, // merged
 	red: 0xcb2431, // closed
 } as const;
-

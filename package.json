@@ -6,11 +6,13 @@
 	"scripts": {
 		"dev": "bun run index.ts --hot",
 		"start": "bun run index.ts",
-		"lint": "biome check . --write"
+		"lint": "biome check . --write",
+		"typecheck": "tsgo --noEmit"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.10",
 		"@types/bun": "latest",
+		"@typescript/native-preview": "^7.0.0-dev.20260204.1",
 		"drizzle-kit": "^0.31.8"
 	},
 	"peerDependencies": {
