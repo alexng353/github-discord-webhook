@@ -4,6 +4,7 @@ export interface GitHubWebhookData {
 	body: unknown;
 	webhookUrl: string;
 	repo: string;
+	webhookMappingId: string;
 }
 
 export type GitHubSignatureResult =
@@ -98,6 +99,7 @@ export async function verifyGitHubSignature(
 			body,
 			webhookUrl: webhookData.webhookUrl,
 			repo: webhookData.repo,
+			webhookMappingId: webhookData.id,
 		},
 	};
 }

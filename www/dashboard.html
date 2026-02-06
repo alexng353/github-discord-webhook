@@ -239,9 +239,58 @@
 		</div>
 	</div>
 
+	<!-- Settings Modal -->
+	<div id="settings-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+		<div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="hideSettingsModal()"></div>
+		<div class="relative bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-lg mx-4 shadow-2xl fade-in max-h-[90vh] overflow-y-auto">
+			<div class="flex items-center justify-between mb-4">
+				<h3 class="text-lg font-semibold">Ping Settings</h3>
+				<span id="settings-repo-name" class="text-sm text-zinc-400"></span>
+			</div>
+
+			<!-- Event Toggles -->
+			<div class="mb-6">
+				<h4 class="text-sm font-medium text-zinc-300 mb-3">Discord Ping Events</h4>
+				<p class="text-xs text-zinc-500 mb-3">Choose which events ping mapped Discord users.</p>
+				<div id="ping-toggles" class="space-y-2"></div>
+				<div id="ping-toggles-error" class="hidden text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mt-2"></div>
+			</div>
+
+			<!-- GitHub-Discord User Mappings -->
+			<div class="border-t border-zinc-800 pt-4">
+				<div class="flex items-center justify-between mb-3">
+					<div>
+						<h4 class="text-sm font-medium text-zinc-300">User Mappings</h4>
+						<p class="text-xs text-zinc-500 mt-0.5">Map GitHub usernames to Discord user IDs</p>
+					</div>
+				</div>
+				<div id="user-mappings-list" class="space-y-2 mb-3"></div>
+				<div class="flex gap-2">
+					<input type="text" id="new-github-username" placeholder="GitHub username"
+						class="flex-1 rounded-lg border-0 bg-zinc-800 py-2 px-3 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-violet-500 text-sm">
+					<input type="text" id="new-discord-user-id" placeholder="Discord user ID"
+						class="flex-1 rounded-lg border-0 bg-zinc-800 py-2 px-3 text-zinc-100 ring-1 ring-inset ring-zinc-700 placeholder:text-zinc-500 focus:ring-2 focus:ring-inset focus:ring-violet-500 text-sm">
+					<button onclick="addUserMapping()"
+						class="px-3 py-2 rounded-lg text-sm font-medium text-violet-400 bg-violet-500/10 hover:bg-violet-500/20 transition-colors border border-violet-500/20 shrink-0">
+						Add
+					</button>
+				</div>
+				<div id="user-mapping-error" class="hidden text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mt-2"></div>
+			</div>
+
+			<div class="mt-6">
+				<button onclick="hideSettingsModal()"
+					class="w-full py-2.5 px-4 rounded-lg text-sm font-semibold text-zinc-950 bg-gradient-to-r from-violet-400 to-purple-400 hover:from-violet-300 hover:to-purple-300 transition-all">
+					Done
+				</button>
+			</div>
+		</div>
+	</div>
+
 	<script>
 		let currentUser = null;
 		let registrationMode = 'open';
+		let currentSettingsMappingId = null;
 
 		// =====================================================================
 		// User & Auth
@@ -290,14 +339,22 @@
 						<div class="flex items-center justify-between gap-4 mb-2">
 							<div class="font-medium text-zinc-100">${escapeHtml(m.repo)}</div>
 							<div class="flex items-center gap-1">
-								<button onclick="regenerateWebhookSecret('${escapeHtml(m.repo)}')" 
+								<button onclick="openSettings('${escapeHtml(m.id)}', '${escapeHtml(m.repo)}')"
+									class="p-2 text-zinc-500 hover:text-violet-400 hover:bg-violet-500/10 rounded-lg transition-colors"
+									title="Ping settings">
+									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z" />
+										<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+									</svg>
+								</button>
+								<button onclick="regenerateWebhookSecret('${escapeHtml(m.repo)}')"
 									class="p-2 text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors"
 									title="Regenerate secret">
 									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
 										<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
 									</svg>
 								</button>
-								<button onclick="deleteMapping('${escapeHtml(m.repo)}')" 
+								<button onclick="deleteMapping('${escapeHtml(m.repo)}')"
 									class="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
 									title="Delete mapping">
 									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -617,6 +674,156 @@
 					throw new Error(data.error || 'Failed to revoke');
 				}
 				loadInvites();
+			} catch (err) {
+				alert(err.message);
+			}
+		}
+
+		// =====================================================================
+		// Ping Settings
+		// =====================================================================
+		const EVENT_LABELS = {
+			pr_opened: 'PR Opened',
+			pr_closed: 'PR Closed (not merged)',
+			pr_merged: 'PR Merged',
+			pr_converted_to_draft: 'PR Converted to Draft',
+			pr_ready_for_review: 'PR Ready for Review',
+			review_approved: 'Review: Approved',
+			review_changes_requested: 'Review: Changes Requested',
+			review_commented: 'Review: Commented',
+		};
+
+		async function openSettings(mappingId, repo) {
+			currentSettingsMappingId = mappingId;
+			document.getElementById('settings-repo-name').textContent = repo;
+			document.getElementById('settings-modal').classList.remove('hidden');
+			document.getElementById('ping-toggles-error').classList.add('hidden');
+			document.getElementById('user-mapping-error').classList.add('hidden');
+			await Promise.all([loadPingSettings(mappingId), loadUserMappings(mappingId)]);
+		}
+
+		function hideSettingsModal() {
+			document.getElementById('settings-modal').classList.add('hidden');
+			currentSettingsMappingId = null;
+		}
+
+		async function loadPingSettings(mappingId) {
+			const container = document.getElementById('ping-toggles');
+			try {
+				const res = await fetch(`/webhooks/mapping/${mappingId}/ping-settings`);
+				const settings = await res.json();
+
+				container.innerHTML = Object.entries(EVENT_LABELS).map(([key, label]) => `
+					<label class="flex items-center justify-between px-3 py-2.5 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 transition-colors cursor-pointer">
+						<span class="text-sm text-zinc-300">${label}</span>
+						<div class="relative">
+							<input type="checkbox" data-event-key="${key}" ${settings[key] ? 'checked' : ''}
+								onchange="togglePingSetting('${key}', this.checked)"
+								class="sr-only peer">
+							<div class="w-9 h-5 bg-zinc-700 rounded-full peer-checked:bg-violet-500 transition-colors"></div>
+							<div class="absolute left-0.5 top-0.5 w-4 h-4 bg-zinc-300 rounded-full peer-checked:translate-x-4 peer-checked:bg-white transition-all"></div>
+						</div>
+					</label>
+				`).join('');
+			} catch (err) {
+				container.innerHTML = '<div class="text-sm text-red-400">Failed to load settings</div>';
+			}
+		}
+
+		async function togglePingSetting(eventKey, enabled) {
+			const errorEl = document.getElementById('ping-toggles-error');
+			errorEl.classList.add('hidden');
+			try {
+				const res = await fetch(`/webhooks/mapping/${currentSettingsMappingId}/ping-settings`, {
+					method: 'PUT',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ [eventKey]: enabled }),
+				});
+				if (!res.ok) {
+					const data = await res.json();
+					throw new Error(data.error || 'Failed to update setting');
+				}
+			} catch (err) {
+				errorEl.textContent = err.message;
+				errorEl.classList.remove('hidden');
+			}
+		}
+
+		async function loadUserMappings(mappingId) {
+			const container = document.getElementById('user-mappings-list');
+			try {
+				const res = await fetch(`/webhooks/mapping/${mappingId}/github-discord-users`);
+				const users = await res.json();
+
+				if (users.length === 0) {
+					container.innerHTML = '<div class="text-xs text-zinc-500 py-2">No user mappings yet.</div>';
+					return;
+				}
+
+				container.innerHTML = users.map(u => `
+					<div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-800/50">
+						<span class="text-sm text-zinc-300 flex-1 truncate">${escapeHtml(u.githubUsername)}</span>
+						<svg class="h-3.5 w-3.5 text-zinc-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+						</svg>
+						<span class="text-sm text-violet-400 flex-1 truncate">${escapeHtml(u.discordUserId)}</span>
+						<button onclick="deleteUserMapping('${u.id}')"
+							class="p-1 text-zinc-500 hover:text-red-400 rounded transition-colors shrink-0" title="Remove">
+							<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						</button>
+					</div>
+				`).join('');
+			} catch (err) {
+				container.innerHTML = '<div class="text-sm text-red-400">Failed to load user mappings</div>';
+			}
+		}
+
+		async function addUserMapping() {
+			const errorEl = document.getElementById('user-mapping-error');
+			const ghInput = document.getElementById('new-github-username');
+			const dcInput = document.getElementById('new-discord-user-id');
+			errorEl.classList.add('hidden');
+
+			const githubUsername = ghInput.value.trim();
+			const discordUserId = dcInput.value.trim();
+
+			if (!githubUsername || !discordUserId) {
+				errorEl.textContent = 'Both fields are required';
+				errorEl.classList.remove('hidden');
+				return;
+			}
+
+			try {
+				const res = await fetch(`/webhooks/mapping/${currentSettingsMappingId}/github-discord-users`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ githubUsername, discordUserId }),
+				});
+				if (!res.ok) {
+					const data = await res.json();
+					throw new Error(data.error || 'Failed to add user mapping');
+				}
+				ghInput.value = '';
+				dcInput.value = '';
+				await loadUserMappings(currentSettingsMappingId);
+			} catch (err) {
+				errorEl.textContent = err.message;
+				errorEl.classList.remove('hidden');
+			}
+		}
+
+		async function deleteUserMapping(id) {
+			try {
+				const res = await fetch(`/webhooks/mapping/${currentSettingsMappingId}/github-discord-users/${id}`, {
+					method: 'DELETE',
+				});
+				if (!res.ok) {
+					const data = await res.json();
+					throw new Error(data.error || 'Failed to delete user mapping');
+				}
+				await loadUserMappings(currentSettingsMappingId);
 			} catch (err) {
 				alert(err.message);
 			}

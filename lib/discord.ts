@@ -35,15 +35,22 @@ export type DiscordEmbed = {
 	}>;
 };
 
-/** Send an embed to a Discord webhook */
+/** Send an embed to a Discord webhook, with optional content for pings */
 export async function sendDiscordEmbed(
 	webhookUrl: string,
 	embed: DiscordEmbed,
+	content?: string,
 ): Promise<{ ok: boolean; status: number }> {
+	const payload: { embeds: DiscordEmbed[]; content?: string } = {
+		embeds: [embed],
+	};
+	if (content) {
+		payload.content = content;
+	}
 	const response = await fetch(webhookUrl, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ embeds: [embed] }),
+		body: JSON.stringify(payload),
 	});
 	return { ok: response.ok, status: response.status };
 }

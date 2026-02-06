@@ -1,11 +1,15 @@
 import {
 	type AuthAdapter,
 	DatabaseAuthAdapter,
+	DatabaseGitHubDiscordUserAdapter,
 	DatabaseInviteAdapter,
+	DatabasePingSettingsAdapter,
 	DatabaseSessionAdapter,
 	DatabaseUserAdapter,
 	DatabaseWebhookMappingAdapter,
+	type GitHubDiscordUserAdapter,
 	type InviteAdapter,
+	type PingSettingsAdapter,
 	type SessionAdapter,
 	type UserAdapter,
 	type WebhookMappingAdapter,
@@ -26,3 +30,9 @@ export const userAdapter: UserAdapter = new DatabaseUserAdapter();
 export const sessionAdapter: SessionAdapter = new DatabaseSessionAdapter();
 
 export const inviteAdapter: InviteAdapter = new DatabaseInviteAdapter();
+
+export const githubDiscordUserAdapter: GitHubDiscordUserAdapter =
+	new DatabaseGitHubDiscordUserAdapter();
+
+export const pingSettingsAdapter: PingSettingsAdapter =
+	new DatabasePingSettingsAdapter();

@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import type { EventKey } from "../adapters";
+import { githubDiscordUserAdapter, pingSettingsAdapter } from "../lib/adapters";
 import { colors } from "../lib/colors";
 import { type DiscordEmbed, sendDiscordEmbed } from "../lib/discord";
 import { filterBody } from "../lib/filterBody";
@@ -230,10 +232,12 @@ githubWebhookApp.post("/github/:id", async (c) => {
 		return c.json({ error: verifyResult.error }, verifyResult.status);
 	}
 
-	const { body, webhookUrl, repo } = verifyResult.data;
+	const { body, webhookUrl, repo, webhookMappingId } = verifyResult.data;
 
 	let embed: DiscordEmbed;
 	let action: string;
+	let eventKey: EventKey | undefined;
+	let pingGithubUsername: string | undefined;
 
 	if (eventType === "pull_request") {
 		const {
@@ -251,15 +255,23 @@ githubWebhookApp.post("/github/:id", async (c) => {
 		switch (parsedBody.action) {
 			case "opened":
 				embed = handleOpened(parsedBody);
+				eventKey = "pr_opened";
+				pingGithubUsername = parsedBody.pull_request.user.login;
 				break;
 			case "closed":
 				embed = handleClosed(parsedBody);
+				eventKey = parsedBody.pull_request.merged ? "pr_merged" : "pr_closed";
+				pingGithubUsername = parsedBody.pull_request.user.login;
 				break;
 			case "converted_to_draft":
 				embed = handleConvertedToDraft(parsedBody);
+				eventKey = "pr_converted_to_draft";
+				pingGithubUsername = parsedBody.pull_request.user.login;
 				break;
 			case "ready_for_review":
 				embed = handleReadyForReview(parsedBody);
+				eventKey = "pr_ready_for_review";
+				pingGithubUsername = parsedBody.pull_request.user.login;
 				break;
 			case "synchronize":
 				return c.json({
@@ -286,9 +298,19 @@ githubWebhookApp.post("/github/:id", async (c) => {
 		action = parsedBody.action;
 
 		switch (parsedBody.action) {
-			case "submitted":
+			case "submitted": {
 				embed = handleReviewSubmitted(parsedBody);
+				const reviewState = parsedBody.review.state;
+				if (reviewState === "approved") {
+					eventKey = "review_approved";
+				} else if (reviewState === "changes_requested") {
+					eventKey = "review_changes_requested";
+				} else if (reviewState === "commented") {
+					eventKey = "review_commented";
+				}
+				pingGithubUsername = parsedBody.pull_request.user.login;
 				break;
+			}
 		}
 	} else {
 		return c.json({
@@ -297,7 +319,27 @@ githubWebhookApp.post("/github/:id", async (c) => {
 		});
 	}
 
-	const result = await sendDiscordEmbed(webhookUrl, embed);
+	// Resolve ping content if applicable
+	let pingContent: string | undefined;
+	if (eventKey && pingGithubUsername) {
+		try {
+			const settings =
+				await pingSettingsAdapter.getForMapping(webhookMappingId);
+			if (settings[eventKey]) {
+				const userMapping = await githubDiscordUserAdapter.getByGithubUsername(
+					webhookMappingId,
+					pingGithubUsername,
+				);
+				if (userMapping) {
+					pingContent = `<@${userMapping.discordUserId}>`;
+				}
+			}
+		} catch (err) {
+			console.error("Failed to resolve ping:", err);
+		}
+	}
+
+	const result = await sendDiscordEmbed(webhookUrl, embed, pingContent);
 
 	if (!result.ok) {
 		return c.json(
@@ -311,6 +353,7 @@ githubWebhookApp.post("/github/:id", async (c) => {
 		event: eventType,
 		action,
 		repo,
+		pinged: !!pingContent,
 	});
 });
 

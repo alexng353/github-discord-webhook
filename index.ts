@@ -4,6 +4,7 @@ import { inviteAdapter } from "./lib/adapters";
 import { env } from "./lib/env";
 import authApp from "./routes/auth";
 import { githubWebhookApp } from "./routes/github-webhook";
+import { pingSettingsApp } from "./routes/ping-settings";
 import staticApp from "./routes/static";
 import { testWebhookApp } from "./routes/test-webhook";
 import { webhookMappingApp } from "./routes/webhook";
@@ -23,6 +24,7 @@ app.route("/", staticApp);
 app.route("/auth", authApp);
 app.route("/webhook", githubWebhookApp);
 app.route("/webhooks", webhookMappingApp);
+app.route("/webhooks", pingSettingsApp);
 app.route("/webhooks", testWebhookApp);
 
 // Global error handler
