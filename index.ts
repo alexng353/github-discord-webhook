@@ -2,6 +2,7 @@ import { $ } from "bun";
 import { Hono } from "hono";
 import { inviteAdapter } from "./lib/adapters";
 import { env } from "./lib/env";
+import { logger } from "./lib/logger";
 import authApp from "./routes/auth";
 import { githubWebhookApp } from "./routes/github-webhook";
 import { pingSettingsApp } from "./routes/ping-settings";
@@ -10,7 +11,6 @@ import { testWebhookApp } from "./routes/test-webhook";
 import { webhookMappingApp } from "./routes/webhook";
 
 await $`bunx drizzle-kit migrate`;
-console.log();
 
 const app = new Hono();
 
@@ -29,7 +29,7 @@ app.route("/webhooks", testWebhookApp);
 
 // Global error handler
 app.onError((err, c) => {
-	console.error("Server error:", err);
+	logger.error({ err }, "Server error");
 	return c.json({ error: "Internal Server Error" }, 500);
 });
 
@@ -44,11 +44,11 @@ const server = Bun.serve({
 	fetch: app.fetch,
 });
 
-console.log(`🚀 Server running at ${server.url}`);
+logger.info({ url: server.url?.toString(), port: env.PORT }, "Server started");
 if (env.REGISTRATION === "invite_only") {
 	inviteAdapter.createFirst().then((code) => {
 		if (code) {
-			console.log(`🔑 First invite code: ${code}`);
+			logger.info({ code }, "First invite code created");
 		}
 	});
 }

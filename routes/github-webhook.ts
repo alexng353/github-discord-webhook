@@ -4,6 +4,7 @@ import { githubDiscordUserAdapter, pingSettingsAdapter } from "../lib/adapters";
 import { colors } from "../lib/colors";
 import { type DiscordEmbed, sendDiscordEmbed } from "../lib/discord";
 import { filterBody } from "../lib/filterBody";
+import { logger } from "../lib/logger";
 import { verifyGitHubSignature } from "../middleware/github-signature";
 import {
 	type GithubWebhookPayload,
@@ -246,7 +247,10 @@ githubWebhookApp.post("/github/:id", async (c) => {
 			error,
 		} = githubWebhookSchema.safeParse(body);
 		if (!success) {
-			console.error("Invalid payload", error);
+			logger.error(
+				{ err: error, eventType, repo },
+				"Invalid pull_request payload",
+			);
 			return c.json({ error: "Invalid payload" }, 400);
 		}
 
@@ -291,7 +295,10 @@ githubWebhookApp.post("/github/:id", async (c) => {
 			error,
 		} = pullRequestReviewSchema.safeParse(body);
 		if (!success) {
-			console.error("Invalid payload", error);
+			logger.error(
+				{ err: error, eventType, repo },
+				"Invalid pull_request_review payload",
+			);
 			return c.json({ error: "Invalid payload" }, 400);
 		}
 
@@ -335,7 +342,10 @@ githubWebhookApp.post("/github/:id", async (c) => {
 				}
 			}
 		} catch (err) {
-			console.error("Failed to resolve ping:", err);
+			logger.error(
+				{ err, eventKey, pingGithubUsername, repo },
+				"Failed to resolve ping",
+			);
 		}
 	}
 

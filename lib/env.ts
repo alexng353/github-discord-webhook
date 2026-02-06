@@ -16,6 +16,9 @@ export const env = createEnv({
 					message: "DATABASE_URL must be a valid postgres:// URL",
 				},
 			),
+		LOG_LEVEL: z
+			.enum(["fatal", "error", "warn", "info", "debug", "trace"])
+			.default("info"),
 		RAILWAY_PUBLIC_DOMAIN: z.string().optional(),
 	},
 	runtimeEnv: process.env,
