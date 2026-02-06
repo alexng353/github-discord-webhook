@@ -710,7 +710,7 @@
 		async function loadPingSettings(mappingId) {
 			const container = document.getElementById('ping-toggles');
 			try {
-				const res = await fetch(`/webhooks/mapping/${mappingId}/ping-settings`);
+				const res = await fetch(`/ping-settings/${mappingId}`);
 				const settings = await res.json();
 
 				container.innerHTML = Object.entries(EVENT_LABELS).map(([key, label]) => `
@@ -734,7 +734,7 @@
 			const errorEl = document.getElementById('ping-toggles-error');
 			errorEl.classList.add('hidden');
 			try {
-				const res = await fetch(`/webhooks/mapping/${currentSettingsMappingId}/ping-settings`, {
+				const res = await fetch(`/ping-settings/${currentSettingsMappingId}`, {
 					method: 'PUT',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({ [eventKey]: enabled }),
@@ -752,7 +752,7 @@
 		async function loadUserMappings(mappingId) {
 			const container = document.getElementById('user-mappings-list');
 			try {
-				const res = await fetch(`/webhooks/mapping/${mappingId}/github-discord-users`);
+				const res = await fetch(`/ping-settings/${mappingId}/discord-users`);
 				const users = await res.json();
 
 				if (users.length === 0) {
@@ -796,7 +796,7 @@
 			}
 
 			try {
-				const res = await fetch(`/webhooks/mapping/${currentSettingsMappingId}/github-discord-users`, {
+				const res = await fetch(`/ping-settings/${currentSettingsMappingId}/discord-users`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({ githubUsername, discordUserId }),
@@ -816,7 +816,7 @@
 
 		async function deleteUserMapping(id) {
 			try {
-				const res = await fetch(`/webhooks/mapping/${currentSettingsMappingId}/github-discord-users/${id}`, {
+				const res = await fetch(`/ping-settings/${currentSettingsMappingId}/discord-users/${id}`, {
 					method: 'DELETE',
 				});
 				if (!res.ok) {

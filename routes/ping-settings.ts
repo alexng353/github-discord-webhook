@@ -42,9 +42,9 @@ async function requireMappingOwnership(
 	await next();
 }
 
-// GET /webhooks/mapping/:mappingId/ping-settings
+// GET /ping-settings/:mappingId
 pingSettingsApp.get(
-	"/mapping/:mappingId/ping-settings",
+	"/:mappingId",
 	requireSession,
 	requireMappingOwnership,
 	async (c) => {
@@ -54,9 +54,9 @@ pingSettingsApp.get(
 	},
 );
 
-// PUT /webhooks/mapping/:mappingId/ping-settings
+// PUT /ping-settings/:mappingId
 pingSettingsApp.put(
-	"/mapping/:mappingId/ping-settings",
+	"/:mappingId",
 	requireSession,
 	requireMappingOwnership,
 	async (c) => {
@@ -80,9 +80,9 @@ pingSettingsApp.put(
 	},
 );
 
-// GET /webhooks/mapping/:mappingId/github-discord-users
+// GET /ping-settings/:mappingId/discord-users
 pingSettingsApp.get(
-	"/mapping/:mappingId/github-discord-users",
+	"/:mappingId/discord-users",
 	requireSession,
 	requireMappingOwnership,
 	async (c) => {
@@ -93,9 +93,9 @@ pingSettingsApp.get(
 	},
 );
 
-// POST /webhooks/mapping/:mappingId/github-discord-users
+// POST /ping-settings/:mappingId/discord-users
 pingSettingsApp.post(
-	"/mapping/:mappingId/github-discord-users",
+	"/:mappingId/discord-users",
 	requireSession,
 	requireMappingOwnership,
 	async (c) => {
@@ -139,9 +139,9 @@ pingSettingsApp.post(
 	},
 );
 
-// DELETE /webhooks/mapping/:mappingId/github-discord-users/:id
+// DELETE /ping-settings/:mappingId/discord-users/:id
 pingSettingsApp.delete(
-	"/mapping/:mappingId/github-discord-users/:id",
+	"/:mappingId/discord-users/:id",
 	requireSession,
 	requireMappingOwnership,
 	async (c) => {

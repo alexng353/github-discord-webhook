@@ -24,7 +24,7 @@ app.route("/", staticApp);
 app.route("/auth", authApp);
 app.route("/webhook", githubWebhookApp);
 app.route("/webhooks", webhookMappingApp);
-app.route("/webhooks", pingSettingsApp);
+app.route("/ping-settings", pingSettingsApp);
 app.route("/webhooks", testWebhookApp);
 
 // Global error handler
