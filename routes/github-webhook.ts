@@ -9,7 +9,9 @@ import { verifyGitHubSignature } from "../middleware/github-signature";
 import {
 	type GithubWebhookPayload,
 	githubWebhookSchema,
+	type PullRequestReviewCommentPayload,
 	type PullRequestReviewPayload,
+	pullRequestReviewCommentSchema,
 	pullRequestReviewSchema,
 } from "../schemas/github";
 
@@ -29,6 +31,10 @@ type ReadyForReviewPayload = Extract<
 type ReviewSubmittedPayload = Extract<
 	PullRequestReviewPayload,
 	{ action: "submitted" }
+>;
+type ReviewCommentCreatedPayload = Extract<
+	PullRequestReviewCommentPayload,
+	{ action: "created" }
 >;
 
 // Callback for "opened" action - returns DiscordEmbed
@@ -207,6 +213,56 @@ function handleReviewSubmitted(payload: ReviewSubmittedPayload): DiscordEmbed {
 	};
 }
 
+// Callback for pull_request_review_comment "created" action - returns DiscordEmbed
+function handleReviewCommentCreated(
+	payload: ReviewCommentCreatedPayload,
+): DiscordEmbed {
+	const comment = payload.comment;
+	const pr = payload.pull_request;
+	const repoFullName = payload.repository?.full_name ?? "Unknown";
+
+	const description = filterBody(comment.body).trim() || "No comment";
+	const filePath = comment.path;
+	const line = comment.line;
+	const locationStr =
+		filePath && line
+			? `\`${filePath}:${line}\``
+			: filePath
+				? `\`${filePath}\``
+				: null;
+
+	return {
+		title: `[${payload.repository.name}]: PR #${pr.number} Comment`,
+		description: locationStr ? `${locationStr}\n\n${description}` : description,
+		url: comment.html_url,
+		color: 0x6e7681, // gray
+		footer: { text: repoFullName },
+		timestamp: comment.created_at.toISOString(),
+		author: {
+			name: comment.user.login,
+			url: comment.user.url,
+			icon_url: comment.user.avatar_url,
+		},
+		fields: [
+			{
+				name: "PR Title",
+				value: pr.title,
+				inline: false,
+			},
+			{
+				name: "Commenter",
+				value: comment.user.login,
+				inline: true,
+			},
+			{
+				name: "PR Author",
+				value: pr.user.login,
+				inline: true,
+			},
+		],
+	};
+}
+
 // POST /webhook/github/:id
 // Main GitHub webhook receiver endpoint
 // Each webhook mapping gets a unique URL with its ID
@@ -306,6 +362,18 @@ githubWebhookApp.post("/github/:id", async (c) => {
 
 		switch (parsedBody.action) {
 			case "submitted": {
+				// Skip "commented" reviews with no body — the actual comment text
+				// comes via the pull_request_review_comment event instead
+				if (
+					parsedBody.review.state === "commented" &&
+					!parsedBody.review.body
+				) {
+					return c.json({
+						ignored: true,
+						reason:
+							"Review comment with no body (line comments handled by pull_request_review_comment)",
+					});
+				}
 				embed = handleReviewSubmitted(parsedBody);
 				const reviewState = parsedBody.review.state;
 				if (reviewState === "approved") {
@@ -315,6 +383,30 @@ githubWebhookApp.post("/github/:id", async (c) => {
 				} else if (reviewState === "commented") {
 					eventKey = "review_commented";
 				}
+				pingGithubUsername = parsedBody.pull_request.user.login;
+				break;
+			}
+		}
+	} else if (eventType === "pull_request_review_comment") {
+		const {
+			success,
+			data: parsedBody,
+			error,
+		} = pullRequestReviewCommentSchema.safeParse(body);
+		if (!success) {
+			logger.error(
+				{ err: error, eventType, repo },
+				"Invalid pull_request_review_comment payload",
+			);
+			return c.json({ error: "Invalid payload" }, 400);
+		}
+
+		action = parsedBody.action;
+
+		switch (parsedBody.action) {
+			case "created": {
+				embed = handleReviewCommentCreated(parsedBody);
+				eventKey = "review_commented";
 				pingGithubUsername = parsedBody.pull_request.user.login;
 				break;
 			}

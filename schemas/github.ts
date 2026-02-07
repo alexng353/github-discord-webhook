@@ -122,3 +122,35 @@ export const pullRequestReviewSchema = z.discriminatedUnion("action", [
 ]);
 
 export type PullRequestReviewPayload = z.infer<typeof pullRequestReviewSchema>;
+
+// Pull Request Review Comment schemas
+export const pullRequestReviewCommentCreatedSchema = z.object({
+	action: z.literal("created"),
+	comment: z.object({
+		id: z.number(),
+		body: z.string(),
+		html_url: z.string(),
+		path: z.string().nullable(),
+		line: z.number().nullable(),
+		user: userSchema,
+		created_at: z.coerce.date(),
+	}),
+	pull_request: z.object({
+		number: z.number(),
+		title: z.string(),
+		html_url: z.string(),
+		user: userSchema,
+	}),
+	repository: z.object({
+		name: z.string().optional().nullable().default("Unknown"),
+		full_name: z.string().optional().nullable().default("Unknown"),
+	}),
+});
+
+export const pullRequestReviewCommentSchema = z.discriminatedUnion("action", [
+	pullRequestReviewCommentCreatedSchema,
+]);
+
+export type PullRequestReviewCommentPayload = z.infer<
+	typeof pullRequestReviewCommentSchema
+>;
